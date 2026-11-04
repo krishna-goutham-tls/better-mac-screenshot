@@ -7,6 +7,15 @@ if arguments.contains("--selftest") {
     exit(SelfTest.run(reportPath: out))
 }
 
+if let index = arguments.firstIndex(of: "--render-iconset") {
+    let path = arguments.count > index + 1 ? arguments[index + 1] : "/tmp/AppIcon.iconset"
+    let ok = MainActor.assumeIsolated {
+        _ = NSApplication.shared
+        return renderIconset(to: path)
+    }
+    exit(ok ? 0 : 1)
+}
+
 let others = NSRunningApplication.runningApplications(withBundleIdentifier: "space.thelaunch.screenshottool")
     .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
 if !others.isEmpty {

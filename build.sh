@@ -30,7 +30,7 @@ compile() {
         -sdk "$SDK" \
         -target "$arch-apple-macos$MIN_OS" \
         -module-name "$NAME" \
-        -framework AppKit -framework Carbon -framework ScreenCaptureKit -framework ServiceManagement \
+        -framework AppKit -framework Carbon -framework ScreenCaptureKit -framework ServiceManagement -framework SwiftUI \
         -o "build/obj/$NAME-$arch" \
         "${SOURCES[@]}"
 }
@@ -56,6 +56,8 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <string>en</string>
     <key>CFBundleExecutable</key>
     <string>ScreenshotTool</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>space.thelaunch.screenshottool</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -82,6 +84,13 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
 </plist>
 PLIST
 plutil -lint "$CONTENTS/Info.plist"
+
+echo "==> copying Resources"
+if [ -d Resources ]; then
+    for f in Resources/*; do
+        [ -f "$f" ] && cp "$f" "$CONTENTS/Resources/"
+    done
+fi
 
 if security find-identity -p codesigning 2>/dev/null | grep -q "\"$IDENTITY\""; then
     echo "==> signing with $IDENTITY"

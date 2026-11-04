@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let output = DispatchQueue(label: "output")
     private var hotkeyItem: NSMenuItem!
     private var loginMenuItem: NSMenuItem!
+    private var soundMenuItem: NSMenuItem!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -46,6 +47,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(folder)
 
         menu.addItem(.separator())
+        soundMenuItem = NSMenuItem(title: "Play capture sound", action: #selector(toggleSound), keyEquivalent: "")
+        soundMenuItem.target = self
+        menu.addItem(soundMenuItem)
         loginMenuItem = NSMenuItem(title: "Open at login", action: #selector(toggleLogin), keyEquivalent: "")
         loginMenuItem.target = self
         menu.addItem(loginMenuItem)
@@ -60,6 +64,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func captureFromMenu() {
         // Let the menu close first, so it is not in the frozen frame.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.startCapture() }
+    }
+
+    @objc private func toggleSound() {
+        Sound.isOn.toggle()
     }
 
     @objc private func toggleLogin() {
@@ -105,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         previousApp?.activate()
         previousApp = nil
         guard let rect else { return }
+        Sound.playShutter()
 
         let crop = Capture.pixelRect(for: rect, viewSize: viewSize, imageWidth: image.width, imageHeight: image.height)
         guard let shot = image.cropping(to: crop) else { return Log.write("crop failed for \(crop)") }
@@ -140,5 +149,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 extension AppDelegate: NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         loginMenuItem.state = LoginItem.isOn ? .on : .off
+        soundMenuItem.state = Sound.isOn ? .on : .off
     }
 }

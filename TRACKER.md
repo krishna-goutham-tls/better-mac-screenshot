@@ -4,7 +4,7 @@ One milestone a day. The agent builds and tests on the Mac; Krishna does the han
 
 ## Now: build
 
-- [ ] Day 1. Menu bar app, Cmd+Shift+2, frozen-frame region capture (ScreenCaptureKit), PNG to the clipboard and `~/Pictures/<app>`, 4-second corner preview. Pass: 10 shots in 10 seconds, each pastes into Slack in turn, 10 files in the folder
+- [ ] Day 1. Menu bar app, Cmd+Shift+2, frozen-frame region capture (ScreenCaptureKit), PNG to the clipboard and the macOS screenshot folder (Desktop by default), 4-second corner preview. Pass: 10 shots in 10 seconds, each pastes in turn into any chat or doc, 10 files in the folder
 - [ ] Day 2. Post mode: padding, background, rounded corners, shadow; fits the X feed. Pass: pasted into an X draft, it looks finished with no editing
 - [ ] Day 3. Auto-blur in both modes before the clipboard; click a blur in the editor to remove it. Pass: fake API key, email and phone all blurred; under 300 ms in the selftest
 - [ ] Day 4. Agent mode: Cmd+Shift+1, tight crop, click for a numbered marker and note, drag for a box, Cmd+Z. Pass: a UI bug marked up in under 15 seconds

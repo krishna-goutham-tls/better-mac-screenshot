@@ -30,7 +30,7 @@ compile() {
         -sdk "$SDK" \
         -target "$arch-apple-macos$MIN_OS" \
         -module-name "$NAME" \
-        -framework AppKit -framework Carbon -framework ScreenCaptureKit \
+        -framework AppKit -framework Carbon -framework ScreenCaptureKit -framework ServiceManagement \
         -o "build/obj/$NAME-$arch" \
         "${SOURCES[@]}"
 }

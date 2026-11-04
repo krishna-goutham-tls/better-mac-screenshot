@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Encode, clipboard and file run here one shot at a time, so fast shots land in order.
     private let output = DispatchQueue(label: "output")
     private var hotkeyItem: NSMenuItem!
+    private var loginMenuItem: NSMenuItem!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -21,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         postHotkey = Hotkey(id: 2, keyCode: UInt32(kVK_ANSI_2), modifiers: UInt32(cmdKey | shiftKey)) { [weak self] in
             self?.startCapture()
         }
+        LoginItem.setDefaultOnFirstLaunch()
         buildMenu()
 
         if !CGPreflightScreenCaptureAccess() {
@@ -45,6 +47,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(folder)
 
         menu.addItem(.separator())
+        loginMenuItem = NSMenuItem(title: "Open at login", action: #selector(toggleLogin), keyEquivalent: "")
+        loginMenuItem.target = self
+        menu.addItem(loginMenuItem)
+        menu.delegate = self
+
+        menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit Screenshot Tool", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
         statusItem.menu = menu
@@ -53,6 +61,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func captureFromMenu() {
         // Let the menu close first, so it is not in the frozen frame.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.startCapture() }
+    }
+
+    @objc private func toggleLogin() {
+        LoginItem.set(!LoginItem.isOn)
     }
 
     @objc private func openFolder() {
@@ -123,5 +135,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
             NSWorkspace.shared.open(url)
         }
+    }
+}
+
+extension AppDelegate: NSMenuDelegate {
+    func menuWillOpen(_ menu: NSMenu) {
+        loginMenuItem.state = LoginItem.isOn ? .on : .off
     }
 }

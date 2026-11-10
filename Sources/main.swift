@@ -16,6 +16,16 @@ if let index = arguments.firstIndex(of: "--render-iconset") {
     exit(ok ? 0 : 1)
 }
 
+if let index = arguments.firstIndex(of: "--editor-test"), index + 1 < arguments.count {
+    func value(_ flag: String) -> String? {
+        arguments.firstIndex(of: flag).flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil }
+    }
+    MainActor.assumeIsolated {
+        SelfTest.editor(image: arguments[index + 1], out: value("--out"), click: value("--click").flatMap { Int($0) },
+                        hover: value("--hover").flatMap { Int($0) }, background: value("--background").flatMap(PostStyle.Background.init(rawValue:)))
+    }
+}
+
 let others = NSRunningApplication.runningApplications(withBundleIdentifier: "space.thelaunch.screenshottool")
     .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
 if !others.isEmpty {

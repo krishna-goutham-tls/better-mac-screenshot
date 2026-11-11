@@ -9,10 +9,10 @@ import UniformTypeIdentifiers
 /// `scripts/demo.sh` builds, runs this and encodes the MP4s.
 @MainActor
 enum Demo {
-    static let screen = CGSize(width: 1440, height: 900)
-    static let scale: CGFloat = 2
-    static let fps = 30.0
-    static let video = CGSize(width: 1600, height: 1000)
+    nonisolated static let screen = CGSize(width: 1440, height: 900)
+    nonisolated static let scale: CGFloat = 2
+    nonisolated static let fps = 30.0
+    nonisolated static let video = CGSize(width: 1600, height: 1000)
 
     static func run(dir: String) -> Int32 {
         _ = NSApplication.shared

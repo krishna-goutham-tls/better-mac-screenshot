@@ -640,7 +640,10 @@ enum Redact {
                            spaced: text[tok].contains(where: \.isWhitespace), in: image)
         let h = snapped.rect.height
         let context = String(text[..<range.lowerBound]) + " " + String(text[range.upperBound...])
-        return Found(rect: pad(snapped.rect, h: h, in: size), kind: kind, secrets: [String(text[range])],
+        // An edge inside the token already took in one spare character ("=" before a key). The pad on that
+        // side stops short of the next character's ink, so the label ("API_KEY") stays sharp.
+        let rect = trim(pad(snapped.rect, h: h, in: size), ink: snapped.rect, left: a > 0, right: b < n, in: image)
+        return Found(rect: rect, kind: kind, secrets: [String(text[range])],
                      context: [context], token: pad(snapped.token, h: h, in: size),
                      line: pad(line.rect.union(snapped.token), h: h, in: size))
     }
@@ -779,6 +782,34 @@ enum Redact {
         // Measured: at 4 px a glyph corner at the end of a 1x line still showed past the rounded corner.
         return rect.insetBy(dx: -max(6, h * 0.35), dy: -max(4, h * 0.2)).integral
             .intersection(CGRect(origin: .zero, size: size))
+    }
+
+    /// Pulls a padded side back to 2 px clear of the first ink outside `ink`, on the rows of `ink`.
+    /// Only for sides whose ink rect already ends on a spare character, so the blur's soft edge falls on it.
+    static func trim(_ padded: CGRect, ink: CGRect, left: Bool, right: Bool, in image: CGImage) -> CGRect {
+        guard left || right, let g = gray(image, padded) else { return padded }
+        let (bg, thr) = inkLevel(g)
+        let y0 = max(0, Int(ink.minY - g.origin.y)), y1 = min(g.h - 1, Int(ink.maxY - g.origin.y) - 1)
+        guard y0 <= y1 else { return padded }
+        func inkColumn(_ x: Int) -> Bool { (y0...y1).contains { abs(Int(g.px[$0 * g.w + x]) - bg) > thr } }
+        var r = padded
+        if left {
+            var x = Int(ink.minX - g.origin.x) - 1
+            while x >= 0 && !inkColumn(x) { x -= 1 }
+            if x >= 0 {
+                let edge = min(ink.minX, g.origin.x + CGFloat(x) + 3)
+                r = CGRect(x: edge, y: r.minY, width: r.maxX - edge, height: r.height)
+            }
+        }
+        if right {
+            var x = Int(ink.maxX - g.origin.x)
+            while x < g.w && !inkColumn(x) { x += 1 }
+            if x < g.w {
+                let edge = max(ink.maxX, g.origin.x + CGFloat(x) - 2)
+                r.size.width = edge - r.minX
+            }
+        }
+        return r
     }
 
     private static func isSecret(_ kind: Kind) -> Bool {

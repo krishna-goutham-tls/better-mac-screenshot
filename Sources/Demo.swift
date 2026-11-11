@@ -24,6 +24,7 @@ enum Demo {
         save(scene.desktop, to: root.appendingPathComponent("stills/desktop.png"))
         save(scene.shot, to: root.appendingPathComponent("stills/shot-raw.png"))
         save(scene.post, to: root.appendingPathComponent("stills/shot-post.png"))
+        if CommandLine.arguments.contains("--draw-test") { return drawTest(scene, root) }
         let only = CommandLine.arguments.firstIndex(of: "--clip").flatMap { $0 + 1 < CommandLine.arguments.count ? CommandLine.arguments[$0 + 1] : nil }
         let clips: [(String, Clip)] = [
             ("capture", CaptureClip(scene)),
@@ -43,6 +44,30 @@ enum Demo {
             }
             print("\(name): \(frames) frames \(clip.size.width)x\(clip.size.height) in \(String(format: "%.1f", Date().timeIntervalSince(t0))) s")
         }
+        return 0
+    }
+
+    /// Checks the drawn blur: a flat drag across the REGION line snaps to that line; a tall drag is a box.
+    /// Writes stills/drawn.png, the shot as it leaves the app with both blurs.
+    private static func drawTest(_ s: Scene, _ root: URL) -> Int32 {
+        let shot = s.shot
+        let layout = PostStyle.layout(width: shot.width, height: shot.height, scale: scale)
+        let lines = Redact.textLines(in: shot).map { EditableShot.canvasRect(for: $0, shotWidth: shot.width, shotHeight: shot.height, scale: scale) }
+        let heights = lines.map(\.height).sorted()
+        let textH = heights.isEmpty ? 28 : heights[heights.count / 2]
+        // REGION=us-east-1 is the 4th row of text: top-left y in the shot is about 14 + 3 * 25 points.
+        let rowTop = (14 + 3 * 25) * scale, rowMid = rowTop + 10 * scale
+        func canvas(_ x: CGFloat, _ yTop: CGFloat) -> CGPoint { CGPoint(x: layout.shot.minX + x, y: layout.shot.minY + CGFloat(shot.height) - yTop) }
+        // A slightly crooked flat drag, 6 px of drift, from inside "us-east-1".
+        let flat = EditableShot.band(from: canvas(150, rowMid), to: canvas(420, rowMid + 6), lines: lines, textH: textH, bounds: layout.shot)
+        // A tall drag over the three npm lines.
+        let box = EditableShot.band(from: canvas(20, 440), to: canvas(500, 600), lines: lines, textH: textH, bounds: layout.shot)
+        let hits = s.hits + [flat, box].map {
+            Redact.Hit(rect: EditableShot.shotRect(forCanvas: $0, shotWidth: shot.width, shotHeight: shot.height, scale: scale), kind: .manual)
+        }
+        print("lines \(lines.count), textH \(Int(textH)); flat band \(hits[hits.count - 2].rect); box \(hits[hits.count - 1].rect)")
+        guard let done = Output.finish(shot, hits: hits, scale: scale, background: .dusk) else { print("render failed"); return 1 }
+        save(done.image, to: root.appendingPathComponent("stills/drawn.png"))
         return 0
     }
 

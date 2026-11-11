@@ -8,6 +8,8 @@ import Vision
 enum Redact {
     enum Kind: String {
         case email, phone, key, token, secret, privateKey, card
+        /// Drawn by the user in the editor.
+        case manual
     }
 
     struct Hit: Equatable {
@@ -179,6 +181,15 @@ enum Redact {
     /// The text height in the shot, from Vision's text rectangle detector: the 10th percentile, so small
     /// text counts. About 5 ms at 1600x1000 and 30 ms at 5107x2866. Nil when it finds no text, which
     /// happens for text under about 12 px.
+    /// Every text line Vision's fast detector sees, in top-left pixels of the image. No reading, so it
+    /// takes tens of milliseconds. The editor snaps a drawn blur to these lines.
+    static func textLines(in image: CGImage) -> [CGRect] {
+        let request = VNDetectTextRectanglesRequest()
+        do { try VNImageRequestHandler(cgImage: image, options: [:]).perform([request]) } catch { return [] }
+        let size = CGSize(width: image.width, height: image.height)
+        return (request.results ?? []).map { pixelRect($0.boundingBox, in: size) }
+    }
+
     static func estimateTextHeight(_ image: CGImage) -> CGFloat? {
         let request = VNDetectTextRectanglesRequest()
         do { try VNImageRequestHandler(cgImage: image, options: [:]).perform([request]) } catch { return nil }
@@ -618,7 +629,7 @@ enum Redact {
         case .key, .privateKey: return 3
         case .token, .secret: return 2
         case .card: return 1
-        case .email, .phone: return 0
+        case .email, .phone, .manual: return 0
         }
     }
 

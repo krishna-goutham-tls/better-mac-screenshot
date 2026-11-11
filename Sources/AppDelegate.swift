@@ -189,6 +189,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         editor.onClose = { [weak self, weak editor] in
             if let self, self.editor === editor { self.editor = nil }
         }
+        // Only while this shot is still the last one: a newer shot must not be replaced by an older edit.
+        let opened = last.shot.raw
+        editor.onRendered = { [weak self] shot, image, png in
+            guard let self, self.last?.shot.raw === opened else { return }
+            self.last = (shot, image, png)
+        }
         self.editor = editor
         editor.show(returningTo: old?.previousApp)
     }

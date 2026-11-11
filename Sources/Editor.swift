@@ -4,7 +4,8 @@ import AppKit
 /// which blurs the user turned off, and the file it was saved to.
 struct EditableShot {
     let raw: CGImage
-    let hits: [Redact.Hit]
+    /// Found blurs first, then the ones the user drew.
+    var hits: [Redact.Hit]
     var removed: Set<Int> = []
     let scale: CGFloat
     var background: PostStyle.Background
@@ -19,6 +20,38 @@ struct EditableShot {
     static func canvasRect(for hit: CGRect, shotWidth: Int, shotHeight: Int, scale: CGFloat) -> CGRect {
         let shot = PostStyle.layout(width: shotWidth, height: shotHeight, scale: scale).shot
         return CGRect(x: shot.minX + hit.minX, y: shot.minY + CGFloat(shotHeight) - hit.maxY, width: hit.width, height: hit.height)
+    }
+
+    /// The other way: a rect in the Post canvas (bottom-left) to top-left pixels of the shot, cut to the shot.
+    static func shotRect(forCanvas r: CGRect, shotWidth: Int, shotHeight: Int, scale: CGFloat) -> CGRect {
+        let shot = PostStyle.layout(width: shotWidth, height: shotHeight, scale: scale).shot
+        let x = r.minX - shot.minX, yTop = CGFloat(shotHeight) - (r.maxY - shot.minY)
+        return CGRect(x: x, y: yTop, width: r.width, height: r.height).integral
+            .intersection(CGRect(x: 0, y: 0, width: shotWidth, height: shotHeight))
+    }
+
+    /// The blur a drag draws, in canvas pixels (bottom-left). A drag flatter than a line of text is a straight
+    /// band over the line under its start, from where the drag began to where it ended. A taller drag is a box.
+    /// `lines` are the text lines in canvas pixels, `textH` the usual line height, `bounds` the shot in the canvas.
+    static func band(from a: CGPoint, to b: CGPoint, lines: [CGRect], textH: CGFloat, bounds: CGRect) -> CGRect {
+        let h = max(textH, 8)
+        let x0 = min(a.x, b.x) - h * 0.25, x1 = max(a.x, b.x) + h * 0.25
+        var y0: CGFloat, y1: CGFloat
+        if abs(b.y - a.y) < h * 0.8 {
+            let near = lines.filter { a.y >= $0.minY - $0.height * 0.35 && a.y <= $0.maxY + $0.height * 0.35 }
+                .min { abs($0.midY - a.y) < abs($1.midY - a.y) }
+            if let line = near {
+                y0 = line.minY - line.height * 0.25
+                y1 = line.maxY + line.height * 0.25
+            } else {
+                y0 = a.y - h * 0.75
+                y1 = a.y + h * 0.75
+            }
+        } else {
+            y0 = min(a.y, b.y)
+            y1 = max(a.y, b.y)
+        }
+        return CGRect(x: x0, y: y0, width: x1 - x0, height: y1 - y0).integral.intersection(bounds)
     }
 }
 
@@ -38,6 +71,14 @@ private final class EditorView: NSView {
     var removed: Set<Int> = [] { didSet { needsDisplay = true } }
     var background: PostStyle.Background = .dusk { didSet { needsDisplay = true } }
     private var hovered: Target? { didSet { if hovered != oldValue { needsDisplay = true } } }
+    /// The shot inside the canvas, and its text lines, in canvas pixels (bottom-left). For drawn blurs.
+    var shotBounds = CGRect.zero
+    var lines: [CGRect] = []
+    var textH: CGFloat = 28
+    /// Where the pointer went down, and the blur the drag would draw (canvas pixels) once it moves.
+    private var downAt: NSPoint?
+    private var drawing: CGRect? { didSet { needsDisplay = true } }
+    var onDraw: ((CGRect) -> Void)?
 
     var onBlur: ((Int) -> Void)?
     var onSwatch: ((PostStyle.Background) -> Void)?
@@ -60,10 +101,23 @@ private final class EditorView: NSView {
         return NSRect(x: (area.midX - w / 2).rounded(), y: (area.midY - h / 2).rounded(), width: w.rounded(), height: h.rounded())
     }
 
-    func viewRect(forBlur i: Int) -> NSRect {
-        let ir = imageRect, r = blurRects[i]
+    func viewRect(forBlur i: Int) -> NSRect { viewRect(canvas: blurRects[i]) }
+
+    func viewRect(canvas r: CGRect) -> NSRect {
+        let ir = imageRect
         let k = ir.width / canvasSize.width
         return NSRect(x: ir.minX + r.minX * k, y: ir.minY + r.minY * k, width: r.width * k, height: r.height * k)
+    }
+
+    private func canvasPoint(_ p: NSPoint) -> CGPoint {
+        let ir = imageRect
+        let k = canvasSize.width / max(ir.width, 1)
+        return CGPoint(x: (p.x - ir.minX) * k, y: (p.y - ir.minY) * k)
+    }
+
+    /// Demo and tests: the blur a drag between two view points would draw.
+    func band(from a: NSPoint, to b: NSPoint) -> CGRect {
+        EditableShot.band(from: canvasPoint(a), to: canvasPoint(b), lines: lines, textH: textH, bounds: shotBounds)
     }
 
     private func swatchRect(_ bg: PostStyle.Background) -> NSRect {
@@ -100,16 +154,41 @@ private final class EditorView: NSView {
     }
 
     private func updateHover(_ event: NSEvent) {
-        hovered = target(at: convert(event.locationInWindow, from: nil))
-        (hovered == nil ? NSCursor.arrow : NSCursor.pointingHand).set()
+        let p = convert(event.locationInWindow, from: nil)
+        hovered = target(at: p)
+        // Over the shot the pointer is a crosshair: a drag there draws a blur.
+        let onShot = viewRect(canvas: shotBounds).contains(p)
+        (hovered != nil ? NSCursor.pointingHand : onShot ? NSCursor.crosshair : NSCursor.arrow).set()
     }
 
     override func cursorUpdate(with event: NSEvent) { updateHover(event) }
     override func mouseMoved(with event: NSEvent) { updateHover(event) }
     override func mouseExited(with event: NSEvent) { hovered = nil; NSCursor.arrow.set() }
 
+    /// A click acts on mouse up, so a drag that starts on a blur draws a new one instead of removing it.
     override func mouseDown(with event: NSEvent) {
-        switch target(at: convert(event.locationInWindow, from: nil)) {
+        let p = convert(event.locationInWindow, from: nil)
+        downAt = viewRect(canvas: shotBounds).contains(p) || target(at: p) != nil ? p : nil
+        drawing = nil
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let start = downAt, viewRect(canvas: shotBounds).contains(start) else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        guard drawing != nil || hypot(p.x - start.x, p.y - start.y) > 4 else { return }
+        drawing = band(from: start, to: p)
+        hovered = nil
+        NSCursor.crosshair.set()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        defer { downAt = nil; drawing = nil }
+        if let r = drawing {
+            if r.width >= 6, r.height >= 6 { onDraw?(r) }
+            return
+        }
+        guard let start = downAt else { return }
+        switch target(at: start) {
         case .blur(let i): onBlur?(i)
         case .swatch(let bg): onSwatch?(bg)
         case nil: break
@@ -177,6 +256,21 @@ private final class EditorView: NSView {
             path.stroke()
         }
 
+        // The blur a drag will draw, while the drag is on.
+        if let d = drawing {
+            let r = viewRect(canvas: d)
+            let path = NSBezierPath(roundedRect: r, xRadius: min(6, r.height / 3), yRadius: min(6, r.height / 3))
+            NSColor.white.withAlphaComponent(0.22).setFill()
+            path.fill()
+            let halo = path.copy() as! NSBezierPath
+            halo.lineWidth = 3.5
+            NSColor.black.withAlphaComponent(0.35).setStroke()
+            halo.stroke()
+            path.lineWidth = 1.5
+            NSColor.white.withAlphaComponent(0.9).setStroke()
+            path.stroke()
+        }
+
         for bg in PostStyle.Background.allCases {
             let r = swatchRect(bg)
             let circle = NSBezierPath(ovalIn: r)
@@ -209,6 +303,8 @@ private final class EditorView: NSView {
 final class Editor: NSObject, NSWindowDelegate {
     private enum Change {
         case blur(Int)
+        /// A blur the user drew; undo takes the last one off.
+        case added
         /// Holds the background before the change.
         case background(PostStyle.Background)
     }
@@ -216,6 +312,7 @@ final class Editor: NSObject, NSWindowDelegate {
     private let window: NSWindow
     private let view = EditorView()
     private let copied = NSTextField(labelWithString: "Copied")
+    private let hint = NSTextField(labelWithString: "Drag over text to blur it")
     private var shot: EditableShot
     private var png: Data
     /// Renders run on the app's output queue, after any shot still being saved.
@@ -229,6 +326,9 @@ final class Editor: NSObject, NSWindowDelegate {
     /// Off only in the editor test, so it leaves the clipboard alone.
     var copies = true
     var onClose: (() -> Void)?
+    /// Each finished render: the shot as edited, its image and PNG. The app keeps it, so the thumbnail
+    /// opens the edited shot next time.
+    var onRendered: ((EditableShot, CGImage, Data) -> Void)?
 
     init(shot: EditableShot, image: CGImage, png: Data, queue: DispatchQueue, screen: NSScreen) {
         self.shot = shot
@@ -275,6 +375,28 @@ final class Editor: NSObject, NSWindowDelegate {
         view.onUndo = { [weak self] in self?.undoLast() }
         view.onClose = { [weak self] in self?.close() }
         view.onEnter = { [weak self] in self?.copyAndClose() }
+        view.onDraw = { [weak self] r in self?.addBlur(canvas: r) }
+        let layout = PostStyle.layout(width: shot.raw.width, height: shot.raw.height, scale: shot.scale)
+        view.shotBounds = layout.shot
+
+        hint.font = .systemFont(ofSize: 12, weight: .medium)
+        hint.textColor = NSColor.white.withAlphaComponent(0.5)
+        hint.sizeToFit()
+        hint.frame.origin = NSPoint(x: EditorView.side, y: ((EditorView.bottom - hint.frame.height) / 2).rounded())
+        hint.autoresizingMask = [.maxXMargin]
+        view.addSubview(hint)
+
+        // The text lines, for drawn blurs to snap to. Fast detection, off the main thread.
+        let raw = shot.raw, scale = shot.scale
+        queue.async { [weak self] in
+            let found = Redact.textLines(in: raw)
+            let canvas = found.map { EditableShot.canvasRect(for: $0, shotWidth: raw.width, shotHeight: raw.height, scale: scale) }
+            let heights = canvas.map(\.height).sorted()
+            DispatchQueue.main.async {
+                self?.view.lines = canvas
+                if !heights.isEmpty { self?.view.textH = heights[heights.count / 2] }
+            }
+        }
 
         copied.font = .systemFont(ofSize: 12, weight: .medium)
         copied.textColor = NSColor.white.withAlphaComponent(0.6)
@@ -314,6 +436,19 @@ final class Editor: NSObject, NSWindowDelegate {
         render()
     }
 
+    /// A blur the user drew, in canvas pixels (bottom-left). It joins the shot's blurs, so a click removes it too.
+    func addBlur(canvas r: CGRect) {
+        let rect = EditableShot.shotRect(forCanvas: r, shotWidth: shot.raw.width, shotHeight: shot.raw.height, scale: shot.scale)
+        guard rect.width >= 4, rect.height >= 4 else { return }
+        shot.hits.append(Redact.Hit(rect: rect, kind: .manual))
+        view.blurRects.append(EditableShot.canvasRect(for: rect, shotWidth: shot.raw.width, shotHeight: shot.raw.height, scale: shot.scale))
+        undo.append(.added)
+        render()
+    }
+
+    /// Tests: the blur a drag between two points of the editor view would draw.
+    func band(from a: NSPoint, to b: NSPoint) -> CGRect { view.band(from: a, to: b) }
+
     func setBackground(_ bg: PostStyle.Background) {
         guard bg != shot.background else { return }
         undo.append(.background(shot.background))
@@ -339,6 +474,12 @@ final class Editor: NSObject, NSWindowDelegate {
         switch change {
         case .blur(let i):
             flip(i)
+        case .added:
+            let i = shot.hits.count - 1
+            shot.hits.removeLast()
+            shot.removed.remove(i)
+            view.removed = shot.removed
+            view.blurRects.removeLast()
         case .background(let bg):
             shot.background = bg
             view.background = bg
@@ -372,6 +513,7 @@ final class Editor: NSObject, NSWindowDelegate {
                 self.rendered = id
                 self.png = done.png
                 self.view.image = done.image
+                self.onRendered?(s, done.image, done.png)
                 self.flashCopied()
             }
         }

@@ -34,6 +34,7 @@ Turn it off with "Blur sensitive text" in the menu bar menu.
 Click the thumbnail in the bottom-right corner to open the last shot.
 
 - Click a blur to remove it. Click the same spot again to put it back.
+- Drag over anything the app missed to blur it. A flat drag blurs that line of text, from where you start to where you let go. A taller drag blurs a box.
 - Click one of the three dots under the shot to change the background. Later shots use the one you picked.
 - Cmd+Z undoes the last change.
 - Every change copies the new image and overwrites the same file in the screenshot folder.

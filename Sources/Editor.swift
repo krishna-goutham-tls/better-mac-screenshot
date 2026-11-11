@@ -84,6 +84,14 @@ private final class EditorView: NSView {
     /// Lets the editor test show a hover without a mouse.
     func setHover(_ i: Int) { hovered = .blur(i) }
 
+    /// Demo mode: sets or clears the hover without a mouse.
+    func demoHover(blur: Int?, swatch: PostStyle.Background?) {
+        hovered = blur.map(Target.blur) ?? swatch.map(Target.swatch)
+    }
+
+    /// Demo mode: where a swatch sits, in view points.
+    func demoSwatchRect(_ bg: PostStyle.Background) -> NSRect { swatchRect(bg) }
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
@@ -384,4 +392,32 @@ final class Editor: NSObject, NSWindowDelegate {
         copiedWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
     }
+}
+
+// MARK: - Demo mode
+
+extension Editor {
+    /// Demo mode: the editor's content at `size` points, drawn at 2x with the given state. The window is never shown.
+    /// Rects come back in view points, origin bottom left.
+    func demoSnapshot(size: NSSize, image: CGImage, removed: Set<Int>, background: PostStyle.Background,
+                      hoverBlur: Int?, hoverSwatch: PostStyle.Background?, copiedAlpha: CGFloat) -> CGImage? {
+        window.setContentSize(size)
+        view.frame = NSRect(origin: .zero, size: size)
+        view.image = image
+        view.removed = removed
+        view.background = background
+        view.demoHover(blur: hoverBlur, swatch: hoverSwatch)
+        copied.alphaValue = copiedAlpha
+        copied.frame.origin = NSPoint(x: size.width - EditorView.side - copied.frame.width,
+                                      y: ((EditorView.bottom - copied.frame.height) / 2).rounded())
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width * 2), pixelsHigh: Int(size.height * 2),
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+        rep.size = size
+        view.cacheDisplay(in: view.bounds, to: rep)
+        return rep.cgImage
+    }
+
+    func demoBlurRect(_ i: Int) -> NSRect { view.viewRect(forBlur: i) }
+    func demoSwatchRect(_ bg: PostStyle.Background) -> NSRect { view.demoSwatchRect(bg) }
 }

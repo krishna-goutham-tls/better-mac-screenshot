@@ -33,6 +33,11 @@ if let index = arguments.firstIndex(of: "--editor-test"), index + 1 < arguments.
     }
 }
 
+if let index = arguments.firstIndex(of: "--demo") {
+    let dir = arguments.count > index + 1 ? arguments[index + 1] : "/tmp/screenshottool-demo"
+    exit(MainActor.assumeIsolated { Demo.run(dir: dir) })
+}
+
 let others = NSRunningApplication.runningApplications(withBundleIdentifier: "space.thelaunch.screenshottool")
     .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
 if !others.isEmpty {

@@ -7,6 +7,13 @@ if arguments.contains("--selftest") {
     exit(SelfTest.run(reportPath: out))
 }
 
+if arguments.contains("--redact-bench") {
+    func value(_ flag: String) -> String? {
+        arguments.firstIndex(of: flag).flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil }
+    }
+    exit(RedactBench.run(reportPath: value("--out"), dumpDir: value("--dump")))
+}
+
 if let index = arguments.firstIndex(of: "--render-iconset") {
     let path = arguments.count > index + 1 ? arguments[index + 1] : "/tmp/AppIcon.iconset"
     let ok = MainActor.assumeIsolated {

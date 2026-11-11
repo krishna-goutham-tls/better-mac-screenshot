@@ -23,7 +23,7 @@ enum SelfTest {
         check("crop maps points to pixels, top-left origin", r == CGRect(x: 20, y: 860, width: 200, height: 100), "\(r)")
 
         // 2. Post look and auto-blur, each module's own checks.
-        for row in PostStyle.selfCheck() + Redact.selfCheck() { check(row.name, row.ok, row.detail) }
+        for row in PostStyle.selfCheck() + Redact.selfCheck() + RedactBench.selfCheck() { check(row.name, row.ok, row.detail) }
 
         // 3. The capture pipeline on a 1600x1000 shot, warm: detect, blur, Post, PNG.
         pipelineCheck()

@@ -23,7 +23,7 @@ Before a shot reaches the clipboard or the screenshot folder, the app reads the 
 - card numbers that pass the checksum, and the first line of a private key
 - long random strings that look like keys
 
-Paths, URLs, git hashes, dates, version numbers and IP addresses stay readable. Apple's Vision framework reads the text and Core Image does the blur, both on the Mac. No image or text is sent anywhere. A 1600x1000 shot takes about 100 ms to read and blur.
+Paths, URLs, git hashes, dates, version numbers and IP addresses stay readable. Apple's Vision framework reads the text and Core Image does the blur, both on the Mac. No image or text is sent anywhere. A key that wraps onto the next row is blurred on both rows. Reading and blurring takes about 300 ms on a 1600x1000 shot and under a second on a 5K one.
 
 If the blur fails, the app covers the sensitive text with solid grey boxes. If that fails too, it copies and saves nothing, beeps, and writes a line to `~/Library/Logs/ScreenshotTool.log`.
 

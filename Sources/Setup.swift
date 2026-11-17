@@ -90,7 +90,7 @@ private struct SetupView: View {
                     .resizable()
                     .frame(width: 56, height: 56)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(model.shotTaken ? "You are all set" : "Screenshot Tool is running")
+                    Text(model.shotTaken ? "You are all set" : "Better Mac Screenshot is running")
                         .font(.system(size: 20, weight: .semibold))
                     Text(model.shotTaken ? "Every shot is on your clipboard, ready to paste." : "Two steps and it is ready.")
                         .foregroundStyle(.secondary)
@@ -99,7 +99,7 @@ private struct SetupView: View {
             .padding(.bottom, 24)
 
             StepRow(number: 1, done: model.permitted, title: "Allow Screen Recording",
-                    detail: model.permitted ? "Done." : (model.asked ? "Turn on Screenshot Tool in the list, then reopen the app." : "macOS asks for this before any app can take a screenshot.")) {
+                    detail: model.permitted ? "Done." : (model.asked ? "Turn on Better Mac Screenshot in the list, then reopen the app." : "macOS asks for this before any app can take a screenshot.")) {
                 if !model.permitted {
                     if model.asked {
                         Button("Quit and reopen") { model.relaunch() }

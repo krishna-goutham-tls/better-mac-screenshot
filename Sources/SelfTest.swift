@@ -1,6 +1,6 @@
 import AppKit
 
-/// `ScreenshotTool --selftest [--out report.txt]`
+/// `BetterMacScreenshot --selftest [--out report.txt]`
 /// Runs the pipeline without the mouse: Post look and auto-blur checks, then frozen frame, crop,
 /// blur, Post, PNG, clipboard, file. Files go to a temp folder. The clipboard is restored at the end.
 enum SelfTest {
@@ -14,7 +14,7 @@ enum SelfTest {
     }
 
     static func run(reportPath: String?) -> Int32 {
-        say("Screenshot Tool selftest")
+        say("Better Mac Screenshot selftest")
         say("save folder: \(Output.saveFolder().path)")
 
         // 1. Crop math: a 100x50 pt drag at (10, 20) on a 1000x500 pt screen with a 2x frame.
@@ -172,7 +172,7 @@ enum SelfTest {
         return (copy, w, { x, y in let i = (y * w + x) * 4; return (copy[i], copy[i + 1], copy[i + 2]) })
     }
 
-    /// `ScreenshotTool --editor-test shot.png [--out post.png] [--click N] [--hover N] [--background night]`
+    /// `BetterMacScreenshot --editor-test shot.png [--out post.png] [--click N] [--hover N] [--background night]`
     /// Runs detect on an image and opens the editor, so the editor can be checked without the mouse.
     /// Leaves the clipboard alone. `--out` gets the Post PNG, and each change overwrites it.
     static func editor(image path: String, out: String?, click: Int?, hover: Int?, background: PostStyle.Background?) -> Never {

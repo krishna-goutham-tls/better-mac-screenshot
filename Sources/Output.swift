@@ -9,7 +9,7 @@ enum Output {
     /// made on first use. The Desktop itself only if that folder cannot be made.
     static func saveFolder() -> URL {
         let fm = FileManager.default
-        if let override = ProcessInfo.processInfo.environment["SCREENSHOTTOOL_SAVE_DIR"] {
+        if let override = ProcessInfo.processInfo.environment["BETTERMACSCREENSHOT_SAVE_DIR"] {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
         let desktop = fm.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)

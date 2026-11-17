@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.delegate = self
 
         menu.addItem(.separator())
-        let quit = NSMenuItem(title: "Quit Screenshot Tool", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit Better Mac Screenshot", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
         statusItem.menu = menu
     }

@@ -1,6 +1,6 @@
-# mac-screenshot-tool
+# Better Mac Screenshot
 
-A free macOS menu bar app for screenshots. Working name.
+A free macOS menu bar app for screenshots.
 
 - One shortcut captures a region and copies it to the clipboard, every time.
 - Sensitive text (emails, phone numbers, API keys) blurs on its own, on the Mac, before the image is copied.
@@ -12,6 +12,12 @@ On first launch a small window asks for the Screen Recording permission and one 
 Shots save to a `Screenshots` folder on your Desktop, made on first use. If you picked another folder in macOS's own Screenshot app (Options > Save to), the app saves there.
 
 No network calls. Nothing leaves your Mac.
+
+## Install
+
+Download [BetterMacScreenshot.dmg](https://github.com/krishna-goutham-tls/better-mac-screenshot/releases/latest/download/BetterMacScreenshot.dmg), open it and drag Better Mac Screenshot to Applications. macOS 14 or later, Apple silicon and Intel. The app is signed and notarized by Apple.
+
+To build it yourself: `./build.sh`, then open `build.noindex/BetterMacScreenshot.app`.
 
 ## Post mode
 
@@ -29,7 +35,7 @@ Before a shot reaches the clipboard or the screenshot folder, the app reads the 
 
 Paths, URLs, git hashes, dates, version numbers and IP addresses stay readable. Apple's Vision framework reads the text and Core Image does the blur, both on the Mac. No image or text is sent anywhere. A key that wraps onto the next row is blurred on both rows. Reading and blurring takes about 300 ms on a 1600x1000 shot and under a second on a 5K one.
 
-If the blur fails, the app covers the sensitive text with solid grey boxes. If that fails too, it copies and saves nothing, beeps, and writes a line to `~/Library/Logs/ScreenshotTool.log`.
+If the blur fails, the app covers the sensitive text with solid grey boxes. If that fails too, it copies and saves nothing, beeps, and writes a line to `~/Library/Logs/BetterMacScreenshot.log`.
 
 Turn it off with "Blur sensitive text" in the menu bar menu.
 

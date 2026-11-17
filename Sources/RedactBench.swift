@@ -3,7 +3,7 @@ import CoreText
 import ImageIO
 import UniformTypeIdentifiers
 
-/// `ScreenshotTool --redact-bench [--out report.txt] [--dump dir]`
+/// `BetterMacScreenshot --redact-bench [--out report.txt] [--dump dir]`
 /// Judges auto-blur from the outside. Draws realistic scenes in code (a terminal, an IDE window, a .env file
 /// in an editor, a team chat), so the pixel box of every secret character comes from CoreText, not from OCR.
 /// Then it calls only `Redact.detect` and `Redact.apply` and measures what a person could still read.

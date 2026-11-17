@@ -15,7 +15,7 @@ private struct ViewfinderCorners: Shape {
 }
 
 /// The Finder, Dock and Login Items icon: cream viewfinder corners and an orange shutter dot on a
-/// dark tile. Drawn in code so it can be regenerated: `ScreenshotTool --render-iconset dir.iconset`.
+/// dark tile. Drawn in code so it can be regenerated: `BetterMacScreenshot --render-iconset dir.iconset`.
 struct AppIconArt: View {
     var body: some View {
         ZStack {
@@ -55,7 +55,7 @@ func menuBarIcon() -> NSImage {
         return true
     }
     image.isTemplate = true
-    image.accessibilityDescription = "Screenshot Tool"
+    image.accessibilityDescription = "Better Mac Screenshot"
     return image
 }
 

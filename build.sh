@@ -1,12 +1,12 @@
 #!/bin/bash
-# Builds build.noindex/ScreenshotTool.app (".noindex" keeps dev builds out of Spotlight) with plain swiftc (Command Line Tools are enough).
+# Builds build.noindex/BetterMacScreenshot.app (".noindex" keeps dev builds out of Spotlight) with plain swiftc (Command Line Tools are enough).
 # Signs with the local "TLS Local Dev" identity when this Mac has it, so the Screen Recording
 # permission survives rebuilds. Without it, signs ad hoc (macOS then asks again after each build).
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
-NAME="ScreenshotTool"
+NAME="BetterMacScreenshot"
 APP="build.noindex/$NAME.app"
 CONTENTS="$APP/Contents"
 BIN="$CONTENTS/MacOS/$NAME"
@@ -55,7 +55,7 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>ScreenshotTool</string>
+    <string>BetterMacScreenshot</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
@@ -63,9 +63,9 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Screenshot Tool</string>
+    <string>Better Mac Screenshot</string>
     <key>CFBundleDisplayName</key>
-    <string>Screenshot Tool</string>
+    <string>Better Mac Screenshot</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

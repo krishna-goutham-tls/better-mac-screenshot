@@ -2,7 +2,7 @@ import AppKit
 import ImageIO
 import UniformTypeIdentifiers
 
-/// Demo mode: `ScreenshotTool --demo <dir>` draws the clips for the tools page, frame by frame, as PNGs.
+/// Demo mode: `BetterMacScreenshot --demo <dir>` draws the clips for the tools page, frame by frame, as PNGs.
 /// The screen is a drawn desktop with made-up values, so no real file or secret can show. Every blur, Post
 /// image and editor view in a clip comes from the app's own code: Redact.detect, Output.finish and the
 /// editor's view. Only the cursor, the key chips and the camera are drawn for the video.

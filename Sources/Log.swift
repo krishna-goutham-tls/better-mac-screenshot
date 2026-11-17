@@ -1,9 +1,9 @@
 import Foundation
 
-/// Appends one line to ~/Library/Logs/ScreenshotTool.log. Never logs image content.
+/// Appends one line to ~/Library/Logs/BetterMacScreenshot.log. Never logs image content.
 enum Log {
     static let file = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Logs/ScreenshotTool.log")
+        .appendingPathComponent("Library/Logs/BetterMacScreenshot.log")
     private static let queue = DispatchQueue(label: "log")
 
     static func write(_ message: String) {

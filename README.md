@@ -7,6 +7,8 @@ A free macOS menu bar app for screenshots. Working name.
 - Post mode adds a background, padding, rounded corners and a shadow, ready for X.
 - Agent mode keeps the shot tight and lets you drop numbered notes on it, then paste the image and the notes into Claude Code, Codex or any coding agent in one go.
 
+On first launch a small window asks for the Screen Recording permission and one practice shot, then stays away.
+
 Shots save to a `Screenshots` folder on your Desktop, made on first use. If you picked another folder in macOS's own Screenshot app (Options > Save to), the app saves there.
 
 No network calls. Nothing leaves your Mac.

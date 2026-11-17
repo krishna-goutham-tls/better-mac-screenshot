@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var overlay: SelectionOverlay?
     private var previousApp: NSRunningApplication?
     private let preview = Preview()
+    private let setup = Setup()
     /// Blur, Post look, encode, clipboard and file run here one shot at a time, so fast shots land in order.
     private let output = DispatchQueue(label: "output")
     /// The most recent shot, for the editor. Older shots are not kept.
@@ -31,8 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         preview.onClick = { [weak self] screen in self?.openEditor(on: screen) }
         warmUp()
 
-        if !CGPreflightScreenCaptureAccess() {
-            CGRequestScreenCaptureAccess()
+        // The setup window asks for Screen Recording; it shows until the first shot lands.
+        if !Setup.isDone || !CGPreflightScreenCaptureAccess() {
+            setup.show()
         }
         Log.write("launched, hotkey Cmd+Shift+2 \(postHotkey == nil ? "NOT registered" : "registered"), save folder \(Output.saveFolder().path)")
     }
@@ -177,6 +179,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 self?.last = (editable, done.image, done.png)
                 self?.preview.show(done.image, on: screen)
+                self?.setup.shotDone()
             }
         }
     }
@@ -212,16 +215,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showPermissionHelp() {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "Screenshot Tool needs Screen Recording permission"
-        alert.informativeText = "Turn on Screenshot Tool in System Settings > Privacy & Security > Screen & System Audio Recording. Then quit and open Screenshot Tool again."
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Cancel")
-        if alert.runModal() == .alertFirstButtonReturn,
-           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-            NSWorkspace.shared.open(url)
-        }
+        setup.show()
     }
 }
 

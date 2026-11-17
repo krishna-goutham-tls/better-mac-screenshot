@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds build/ScreenshotTool.app with plain swiftc (Command Line Tools are enough).
+# Builds build.noindex/ScreenshotTool.app (".noindex" keeps dev builds out of Spotlight) with plain swiftc (Command Line Tools are enough).
 # Signs with the local "TLS Local Dev" identity when this Mac has it, so the Screen Recording
 # permission survives rebuilds. Without it, signs ad hoc (macOS then asks again after each build).
 set -euo pipefail
@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 NAME="ScreenshotTool"
-APP="build/$NAME.app"
+APP="build.noindex/$NAME.app"
 CONTENTS="$APP/Contents"
 BIN="$CONTENTS/MacOS/$NAME"
 MIN_OS="14.0"
@@ -21,8 +21,8 @@ if [ ${#SOURCES[@]} -eq 0 ]; then
     exit 1
 fi
 
-rm -rf "$APP" build/obj
-mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources" build/obj
+rm -rf "$APP" build.noindex/obj
+mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources" build.noindex/obj
 
 compile() {
     local arch="$1"
@@ -31,7 +31,7 @@ compile() {
         -target "$arch-apple-macos$MIN_OS" \
         -module-name "$NAME" \
         -framework AppKit -framework Carbon -framework ScreenCaptureKit -framework ServiceManagement -framework SwiftUI \
-        -o "build/obj/$NAME-$arch" \
+        -o "build.noindex/obj/$NAME-$arch" \
         "${SOURCES[@]}"
 }
 
@@ -40,10 +40,10 @@ compile arm64
 
 echo "==> compiling x86_64"
 if compile x86_64; then
-    lipo -create "build/obj/$NAME-arm64" "build/obj/$NAME-x86_64" -output "$BIN"
+    lipo -create "build.noindex/obj/$NAME-arm64" "build.noindex/obj/$NAME-x86_64" -output "$BIN"
 else
     echo "warning: x86_64 build failed, shipping arm64 only" >&2
-    cp "build/obj/$NAME-arm64" "$BIN"
+    cp "build.noindex/obj/$NAME-arm64" "$BIN"
 fi
 
 echo "==> writing Info.plist"
@@ -100,5 +100,5 @@ else
     codesign --force --sign - --timestamp=none "$APP"
 fi
 
-rm -rf build/obj
+rm -rf build.noindex/obj
 echo "==> built $APP ($(lipo -archs "$BIN"))"

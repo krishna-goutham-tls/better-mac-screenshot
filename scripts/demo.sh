@@ -11,10 +11,10 @@ FRAMES="$OUT/frames"
 
 "$ROOT/build.sh" >/dev/null
 if [ $# -ge 2 ]; then
-    "$ROOT/build/ScreenshotTool.app/Contents/MacOS/ScreenshotTool" --demo "$FRAMES" --clip "$2"
+    "$ROOT/build.noindex/ScreenshotTool.app/Contents/MacOS/ScreenshotTool" --demo "$FRAMES" --clip "$2"
     CLIPS=$2
 else
-    "$ROOT/build/ScreenshotTool.app/Contents/MacOS/ScreenshotTool" --demo "$FRAMES"
+    "$ROOT/build.noindex/ScreenshotTool.app/Contents/MacOS/ScreenshotTool" --demo "$FRAMES"
     CLIPS="capture blur unblur backgrounds"
 fi
 

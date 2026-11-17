@@ -3,7 +3,7 @@
 # permission. Usage: sh scripts/selftest.sh (after ./build.sh)
 set -u
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-APP="$ROOT/build/ScreenshotTool.app"
+APP="$ROOT/build.noindex/ScreenshotTool.app"
 [ -d "$APP" ] || { echo "build first: ./build.sh"; exit 1; }
 REPORT=$(mktemp /tmp/screenshottool-selftest.XXXXXX)
 trap 'rm -f "$REPORT"' EXIT INT TERM

@@ -19,31 +19,53 @@ enum Capture {
         screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
     }
 
-    /// Calls back on the main queue. Leaves this app's own windows (the corner preview) out of the frame.
+    /// One filter per display, built ahead of time, so a shot skips the window list (the slow part).
+    /// Main thread only. `prepare()` refreshes it at launch and when displays change.
+    private static var filters: [CGDirectDisplayID: SCContentFilter] = [:]
+
+    static func prepare(completion: (() -> Void)? = nil) {
+        SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: false) { content, _ in
+            DispatchQueue.main.async {
+                if let content {
+                    // Excluding the app (not its windows) also leaves out windows it opens later, such as
+                    // the selection overlay that is already on screen when the frame is taken.
+                    let mine = content.applications.filter { $0.processID == getpid() }
+                    var next: [CGDirectDisplayID: SCContentFilter] = [:]
+                    for display in content.displays {
+                        next[display.displayID] = SCContentFilter(display: display, excludingApplications: mine, exceptingWindows: [])
+                    }
+                    filters = next
+                }
+                completion?()
+            }
+        }
+    }
+
+    /// Calls back on the main queue. Leaves this app's own windows (overlay, corner preview) out of the frame.
     static func frozenFrame(of screen: NSScreen, completion: @escaping (Result<CGImage, Error>) -> Void) {
         let finish: (Result<CGImage, Error>) -> Void = { result in DispatchQueue.main.async { completion(result) } }
         guard let id = displayID(of: screen) else { return finish(.failure(CaptureError.noDisplay)) }
-        let pointSize = screen.frame.size
-        let scale = screen.backingScaleFactor
+        let config = SCStreamConfiguration()
+        config.width = Int(screen.frame.width * screen.backingScaleFactor)
+        config.height = Int(screen.frame.height * screen.backingScaleFactor)
+        config.showsCursor = false
+        config.captureResolution = .best
 
-        SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { content, error in
-            if let error { return finish(.failure(error)) }
-            guard let content, let display = content.displays.first(where: { $0.displayID == id }) else {
-                return finish(.failure(CaptureError.noDisplay))
-            }
-            let mine = content.applications.filter { $0.processID == getpid() }
-            let filter = SCContentFilter(display: display, excludingApplications: mine, exceptingWindows: [])
-            let config = SCStreamConfiguration()
-            config.width = Int(pointSize.width * scale)
-            config.height = Int(pointSize.height * scale)
-            config.showsCursor = false
-            config.captureResolution = .best
+        func shoot(_ filter: SCContentFilter, retry: Bool) {
             SCScreenshotManager.captureImage(contentFilter: filter, configuration: config) { image, error in
-                if let error { return finish(.failure(error)) }
-                guard let image else { return finish(.failure(CaptureError.noImage)) }
-                finish(.success(image))
+                if let image { return finish(.success(image)) }
+                // A stale filter (display gone, app list changed): rebuild once, then give up.
+                if retry { return DispatchQueue.main.async { refreshThenShoot() } }
+                finish(.failure(error ?? CaptureError.noImage))
             }
         }
+        func refreshThenShoot() {
+            prepare {
+                guard let filter = filters[id] else { return finish(.failure(CaptureError.noDisplay)) }
+                shoot(filter, retry: false)
+            }
+        }
+        if let filter = filters[id] { shoot(filter, retry: true) } else { refreshThenShoot() }
     }
 
     /// Converts a selection in view points (origin bottom left) to a pixel crop of the frozen frame.

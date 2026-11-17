@@ -12,7 +12,9 @@ CONTENTS="$APP/Contents"
 BIN="$CONTENTS/MacOS/$NAME"
 MIN_OS="14.0"
 SDK="$(xcrun --show-sdk-path)"
-IDENTITY="TLS Local Dev"
+# Developer ID when this Mac has it: dev builds then share the installed app's Screen Recording grant.
+IDENTITY="Developer ID Application: Narasipuram Krishna Goutham (859S7G7287)"
+security find-identity -v -p codesigning 2>/dev/null | grep -q "\"$IDENTITY\"" || IDENTITY="TLS Local Dev"
 
 shopt -s nullglob
 SOURCES=(Sources/*.swift)

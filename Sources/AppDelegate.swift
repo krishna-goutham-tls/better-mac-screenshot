@@ -5,6 +5,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var postHotkey: Hotkey?
     private var overlay: SelectionOverlay?
+    /// One overlay per display, reused for every shot. Rebuilt when displays change.
+    private var overlays: [CGDirectDisplayID: SelectionOverlay] = [:]
     private var previousApp: NSRunningApplication?
     private let preview = Preview()
     private let setup = Setup()
@@ -35,6 +37,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // The setup window asks for Screen Recording; it shows until the first shot lands.
         if !Setup.isDone || !CGPreflightScreenCaptureAccess() {
             setup.show()
+        }
+        Capture.prepare()
+        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.overlays.removeAll()
+                Capture.prepare()
+            }
         }
         Log.write("launched, hotkey Cmd+Shift+2 \(postHotkey == nil ? "NOT registered" : "registered"), save folder \(Output.saveFolder().path)")
     }
@@ -99,30 +108,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func startCapture() {
-        guard overlay == nil, let screen = screenUnderMouse() else { return }
+        guard overlay == nil, let screen = screenUnderMouse(), let id = Capture.displayID(of: screen) else { return }
         let front = NSWorkspace.shared.frontmostApplication
         previousApp = front?.processIdentifier == getpid() ? nil : front
         let started = Date()
 
-        Capture.frozenFrame(of: screen) { [weak self] result in
+        // The dim layer goes up first, so the shortcut answers at once; the frame follows under it.
+        let overlay = overlays[id] ?? SelectionOverlay(screen: screen)
+        overlays[id] = overlay
+        var frame: CGImage?
+        var pending: (rect: NSRect, size: NSSize)?
+        overlay.onDone = { [weak self] rect, size in
             guard let self else { return }
+            guard let rect else { return self.finishSelection(nil, viewSize: size, image: nil, screen: screen) }
+            // A drag that ends before the frame lands (rare: the frame takes about 20 ms) waits for it.
+            if let frame { self.finishSelection(rect, viewSize: size, image: frame, screen: screen) } else { pending = (rect, size) }
+        }
+        self.overlay = overlay
+        overlay.begin()
+
+        Capture.frozenFrame(of: screen) { [weak self] result in
+            guard let self, self.overlay === overlay else { return }
             switch result {
             case .failure(let error):
                 Log.write("capture failed: \(error)")
+                self.finishSelection(nil, viewSize: .zero, image: nil, screen: screen)
                 self.showPermissionHelp()
             case .success(let image):
-                let ms = Int(Date().timeIntervalSince(started) * 1000)
-                Log.write("frozen frame \(image.width)x\(image.height) in \(ms) ms")
-                let overlay = SelectionOverlay(screen: screen, image: image) { [weak self] rect, viewSize in
-                    self?.finishSelection(rect, viewSize: viewSize, image: image, screen: screen)
-                }
-                self.overlay = overlay
-                overlay.show()
+                Log.write("frozen frame \(image.width)x\(image.height) in \(Int(Date().timeIntervalSince(started) * 1000)) ms, dim layer was up at once")
+                frame = image
+                overlay.setFrame(image)
+                if let pending { self.finishSelection(pending.rect, viewSize: pending.size, image: image, screen: screen) }
             }
         }
     }
 
-    private func finishSelection(_ rect: NSRect?, viewSize: NSSize, image: CGImage, screen: NSScreen) {
+    private func finishSelection(_ rect: NSRect?, viewSize: NSSize, image: CGImage?, screen: NSScreen) {
         overlay?.close()
         overlay = nil
         // Nil when the editor was in front: a cancel then leaves the focus on the editor.
@@ -134,7 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             editor.close(restoreFocus: false)
         }
         back?.activate()
-        guard let rect else { return }
+        guard let rect, let image else { return }
         preview.hideNow()
         Sound.playShutter()
 

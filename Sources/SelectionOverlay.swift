@@ -12,6 +12,13 @@ private final class SelectionView: NSView {
     private var current: NSPoint?
     private var finished = false
 
+    func reset() {
+        start = nil
+        current = nil
+        finished = false
+        needsDisplay = true
+    }
+
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -88,26 +95,30 @@ private final class SelectionView: NSView {
     }
 }
 
-/// One full-screen window per capture, showing the frozen frame under the dimmed selection layer.
+/// One full-screen window per display, made once and reused. It shows the dim layer the moment the
+/// shortcut is pressed; the frozen frame slides in under it a few milliseconds later. The capture
+/// leaves this app's windows out, so the dim never ends up in the shot.
 final class SelectionOverlay {
     private let window: NSWindow
     private let view: SelectionView
+    private let root: NSView
+    /// Gets the selected region in view points and the view size, or nil when the user cancelled.
+    var onDone: ((NSRect?, NSSize) -> Void)?
 
-    /// `onDone` gets the selected region in view points, or nil when the user cancelled.
-    init(screen: NSScreen, image: CGImage, onDone: @escaping (NSRect?, NSSize) -> Void) {
+    init(screen: NSScreen) {
         let frame = screen.frame
         window = OverlayWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.level = .screenSaver
-        window.isOpaque = true
+        window.isOpaque = false
         window.hasShadow = false
-        window.backgroundColor = .black
+        window.backgroundColor = .clear
         window.isReleasedWhenClosed = false
+        window.animationBehavior = .none
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         window.setFrame(frame, display: false)
 
-        let root = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        root = NSView(frame: NSRect(origin: .zero, size: frame.size))
         root.wantsLayer = true
-        root.layer?.contents = image
         root.layer?.contentsGravity = .resize
 
         view = SelectionView(frame: root.bounds)
@@ -116,19 +127,29 @@ final class SelectionOverlay {
         window.contentView = root
 
         let size = frame.size
-        view.onDone = { rect in onDone(rect, size) }
+        view.onDone = { [weak self] rect in self?.onDone?(rect, size) }
     }
 
-    func show() {
-        NSApp.activate(ignoringOtherApps: true)
+    func begin() {
+        root.layer?.contents = nil
+        view.reset()
         window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         window.makeFirstResponder(view)
         window.invalidateCursorRects(for: view)
         NSCursor.crosshair.set()
     }
 
+    /// Puts the frozen frame under the dim layer. No animation: it matches the live screen pixel for pixel.
+    func setFrame(_ image: CGImage) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        root.layer?.contents = image
+        CATransaction.commit()
+    }
+
     func close() {
         window.orderOut(nil)
-        window.close()
+        root.layer?.contents = nil
     }
 }

@@ -11,7 +11,7 @@ On first launch a small window asks for the Screen Recording permission and one 
 
 Shots save to a `Screenshots` folder on your Desktop, made on first use. If you picked another folder in macOS's own Screenshot app (Options > Save to), the app saves there.
 
-No network calls. Nothing leaves your Mac.
+No image, text or file of yours leaves your Mac. The only network call is the update check: once a day the app asks GitHub whether a newer version exists. If one does, a small window offers it: click Update and it installs and reopens by itself. The check sends nothing about you or your Mac. Turn it off with "Check daily" in that window, and check by hand from the menu with **Check for updates…**.
 
 ## Install
 

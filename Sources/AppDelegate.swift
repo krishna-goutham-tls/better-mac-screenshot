@@ -76,9 +76,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.delegate = self
 
         menu.addItem(.separator())
+        MainActor.assumeIsolated { menu.addItem(Updater.shared.menuItem) }
         let quit = NSMenuItem(title: "Quit Better Mac Screenshot", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
         statusItem.menu = menu
+        MainActor.assumeIsolated { Updater.shared.start() }
     }
 
     @objc private func captureFromMenu() {

@@ -1,5 +1,10 @@
 # Tracker
 
+## Updates
+
+- [x] In-app updater (2026-11-18, not released): daily GitHub check, update window, one-click install with a Developer ID check, "Check for updates…" in the menu. Tested against the real GitHub release
+- [ ] First release with the updater (needs Krishna's go). Copies from before it never update themselves
+
 One milestone a day. The agent builds and tests on the Mac; Krishna does the hands-on test and records the clip for the day's X post. How the app works is in the project context (`../brainstorming/build-plan.md` in tls-context).
 
 ## Now: build

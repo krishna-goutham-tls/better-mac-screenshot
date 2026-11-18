@@ -71,9 +71,13 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>0.1.1</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
+    <key>TLSUpdateRepo</key>
+    <string>krishna-goutham-tls/better-mac-screenshot</string>
+    <key>TLSUpdateAsset</key>
+    <string>BetterMacScreenshot.dmg</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
